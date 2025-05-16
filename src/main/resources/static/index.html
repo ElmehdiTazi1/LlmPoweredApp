@@ -217,29 +217,38 @@
             const endpoint = outputType === 'raw' 
                 ? '/api/conversion/jsp-to-thymeleaf/raw'
                 : '/api/conversion/jsp-to-thymeleaf';
-                
-            fetch(endpoint, {
+                  fetch(endpoint, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': outputType === 'raw' ? 'text/html' : 'application/json'
                 },
                 body: JSON.stringify({ jspCode: jspCode })
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    if (response.headers.get('Content-Type').includes('application/json')) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Conversion failed');
+                        });
+                    } else {
+                        return response.text().then(text => {
+                            throw new Error(text || 'Conversion failed');
+                        });
+                    }
                 }
                 
-                if (outputType === 'raw') {
-                    return response.text();
-                } else {
+                const contentType = response.headers.get('Content-Type');
+                if (contentType && contentType.includes('application/json')) {
                     return response.json();
+                } else {
+                    return response.text();
                 }
             })
             .then(data => {
                 spinner.style.display = 'none';
                 
-                if (outputType === 'raw') {
+                if (typeof data === 'string') {
                     thymeleafCodeElement.value = data;
                 } else {
                     thymeleafCodeElement.value = data.thymeleafCode;
@@ -249,7 +258,7 @@
             })
             .catch(error => {
                 spinner.style.display = 'none';
-                errorElement.textContent = 'Error: ' + error.message;
+                errorElement.textContent = 'Error: ' + (error.message || 'Conversion failed');
             });
         });
     </script>

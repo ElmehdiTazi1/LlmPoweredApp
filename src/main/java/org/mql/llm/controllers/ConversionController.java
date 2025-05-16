@@ -65,33 +65,64 @@ public class ConversionController {
      * 
      * @param request Requête contenant le code JSP à convertir
      * @return Code Thymeleaf généré en HTML brut
-     */
-    @PostMapping(value = "/jsp-to-thymeleaf/raw", produces = MediaType.TEXT_HTML_VALUE)
+     */    @PostMapping(value = "/jsp-to-thymeleaf/raw")
     @Operation(
-        summary = "Convert JSP to Thymeleaf (Raw HTML)", 
-        description = "Converts JSP code to equivalent Thymeleaf code using AI and returns raw HTML"
+        summary = "Convert JSP to Thymeleaf (Raw HTML Response)", 
+        description = "Converts JSP code to equivalent Thymeleaf code using AI and returns raw HTML content based on Accept header"
     )
     @ApiResponse(responseCode = "200", description = "Conversion successful")
     @ApiResponse(responseCode = "400", description = "Bad request - JSP code is missing")
-    public ResponseEntity<String> convertJspToThymeleafRaw(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> convertJspToThymeleafRaw(
+            @RequestBody Map<String, String> request,
+            @RequestHeader(value = "Accept", defaultValue = MediaType.TEXT_HTML_VALUE) String acceptHeader) {
+        
         if (!request.containsKey("jspCode")) {
-            return ResponseEntity.badRequest().body("Erreur: Le code JSP est requis");
+            if (acceptHeader.contains(MediaType.APPLICATION_JSON_VALUE)) {
+                return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("error", "Le code JSP est requis", "success", "false"));
+            } else {
+                return ResponseEntity.badRequest()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Erreur: Le code JSP est requis");
+            }
         }
         
         String jspCode = request.get("jspCode");
         
         try {
             String thymeleafCode = conversionService.convertJspToThymeleaf(jspCode);
+            ConversionResult result = new ConversionResult(jspCode, thymeleafCode);
             
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.TEXT_HTML);
-            
-            return ResponseEntity.ok()
-                .headers(headers)
-                .body(thymeleafCode);
+            // Return response based on the Accept header
+            if (acceptHeader.contains(MediaType.APPLICATION_JSON_VALUE)) {
+                return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of(
+                        "thymeleafCode", thymeleafCode,
+                        "timestamp", result.getTimestamp().toString(),
+                        "success", Boolean.toString(result.isSuccess()),
+                        "htmlContent", thymeleafCode
+                    ));
+            } else {
+                // Return raw HTML content
+                return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(thymeleafCode);
+            }
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body("Erreur lors de la conversion: " + e.getMessage());
+            if (acceptHeader.contains(MediaType.APPLICATION_JSON_VALUE)) {
+                return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of(
+                        "error", "Erreur lors de la conversion: " + e.getMessage(),
+                        "success", "false"
+                    ));
+            } else {
+                return ResponseEntity.badRequest()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Erreur lors de la conversion: " + e.getMessage());
+            }
         }
     }
 }
