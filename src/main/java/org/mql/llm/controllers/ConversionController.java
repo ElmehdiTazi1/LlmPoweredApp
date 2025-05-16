@@ -1,5 +1,6 @@
 package org.mql.llm.controllers;
 
+import org.mql.llm.models.ConversionResult;
 import org.mql.llm.services.JspToThymeleafService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -23,9 +24,7 @@ public class ConversionController {
 
     public ConversionController(JspToThymeleafService conversionService) {
         this.conversionService = conversionService;
-    }
-
-    /**
+    }    /**
      * Convertit le code JSP en Thymeleaf et retourne le résultat au format JSON
      * 
      * @param request Requête contenant le code JSP à convertir
@@ -38,18 +37,30 @@ public class ConversionController {
     )
     @ApiResponse(responseCode = "200", description = "Conversion successful")
     @ApiResponse(responseCode = "400", description = "Bad request - JSP code is missing")
-    public ResponseEntity<Map<String, String>> convertJspToThymeleaf(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> convertJspToThymeleaf(@RequestBody Map<String, String> request) {
         if (!request.containsKey("jspCode")) {
             return ResponseEntity.badRequest().body(Map.of("error", "Le code JSP est requis"));
         }
         
         String jspCode = request.get("jspCode");
-        String thymeleafCode = conversionService.convertJspToThymeleaf(jspCode);
         
-        return ResponseEntity.ok(Map.of("thymeleafCode", thymeleafCode));
+        try {
+            String thymeleafCode = conversionService.convertJspToThymeleaf(jspCode);
+            ConversionResult result = new ConversionResult(jspCode, thymeleafCode);
+            
+            return ResponseEntity.ok(Map.of(
+                "thymeleafCode", thymeleafCode,
+                "timestamp", result.getTimestamp().toString(),
+                "success", Boolean.toString(result.isSuccess())
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Erreur lors de la conversion: " + e.getMessage(),
+                "success", "false"
+            ));
+        }
     }
-    
-    /**
+      /**
      * Convertit le code JSP en Thymeleaf et retourne directement le HTML
      * 
      * @param request Requête contenant le code JSP à convertir
@@ -68,13 +79,19 @@ public class ConversionController {
         }
         
         String jspCode = request.get("jspCode");
-        String thymeleafCode = conversionService.convertJspToThymeleaf(jspCode);
         
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.TEXT_HTML);
-        
-        return ResponseEntity.ok()
-            .headers(headers)
-            .body(thymeleafCode);
+        try {
+            String thymeleafCode = conversionService.convertJspToThymeleaf(jspCode);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.TEXT_HTML);
+            
+            return ResponseEntity.ok()
+                .headers(headers)
+                .body(thymeleafCode);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body("Erreur lors de la conversion: " + e.getMessage());
+        }
     }
 }

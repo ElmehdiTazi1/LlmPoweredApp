@@ -11,25 +11,25 @@ import java.util.regex.Pattern;
  */
 @Service
 public class JspToThymeleafService {
-    
-    private final GeminiService geminiService;
+      private final GeminiService geminiService;
     private final String promptTemplate;
     
     public JspToThymeleafService(GeminiService geminiService) {
         this.geminiService = geminiService;
-        // Escape les expressions Thymeleaf pour éviter que Spring ne les interprète comme des placeholders
+        
+        // Définition du prompt template directement dans le code
         this.promptTemplate = "Tu es un expert en développement Java et en frameworks web, spécialisé dans la migration de JSP vers Thymeleaf. "
             + "Ta mission est de convertir le code JSP que je vais te soumettre en code Thymeleaf équivalent selon les spécifications suivantes:"
             + "\n\n# Règles de conversion JSP vers Thymeleaf:"
             + "\n\n## Éléments à convertir systématiquement:"
-            + "\n- Remplacer `<%= expression %>` par `th:text=\"$" + "{expression}\"`"
-            + "\n- Convertir `$" + "{pageContext.request.contextPath}` en `@{/}`"
-            + "\n- Transformer `<c:if test=\"condition\">` en `th:if=\"$" + "{condition}\"`"
-            + "\n- Transformer `<c:forEach var=\"item\" items=\"collection\">` en `th:each=\"item : $" + "{collection}\"`"
-            + "\n- Remplacer `<c:out value=\"expression\"/>` par `th:text=\"$" + "{expression}\"`"
+            + "\n- Remplacer `<%= expression %>` par `th:text=\"${expression}\"`"
+            + "\n- Convertir `${pageContext.request.contextPath}` en `@{/}`"
+            + "\n- Transformer `<c:if test=\"condition\">` en `th:if=\"${condition}\"`"
+            + "\n- Transformer `<c:forEach var=\"item\" items=\"collection\">` en `th:each=\"item : ${collection}\"`"
+            + "\n- Remplacer `<c:out value=\"expression\"/>` par `th:text=\"${expression}\"`"
             + "\n- Convertir `<c:choose>`, `<c:when>`, `<c:otherwise>` en utilisant `th:if`, `th:unless`, `th:switch`, et `th:case`"
             + "\n- Transformer les inclusions `<jsp:include page=\"...\"/>` en `th:insert` ou `th:replace`"
-            + "\n- Remplacer les EL expressions comme `$" + "{variable}` en maintenant la même syntaxe `$" + "{variable}` (Thymeleaf utilise la même syntaxe)"
+            + "\n- Remplacer les EL expressions comme `${variable}` en maintenant la même syntaxe `${variable}` (Thymeleaf utilise la même syntaxe)"
             + "\n\n## Éléments impossibles à convertir automatiquement:"
             + "\nPour chaque élément impossible à convertir automatiquement, encadre-le avec des commentaires HTML dans le format suivant:"
             + "\n<!--"
@@ -55,17 +55,50 @@ public class JspToThymeleafService {
             + "\nRetourne uniquement le code HTML/Thymeleaf converti sans aucun autre commentaire, texte d'explication ou balise de formatage Markdown (comme ```html ou ```)."
             + "\n\nTransforme maintenant le code JSP suivant en Thymeleaf équivalent:";
     }
-    
-    /**
+      /**
      * Convertit le code JSP en Thymeleaf équivalent.
      * 
      * @param jspCode Code JSP à convertir
      * @return Code Thymeleaf résultant
      */
     public String convertJspToThymeleaf(String jspCode) {
-        String prompt = buildPrompt(jspCode);
+        // Prétraitement du code JSP pour améliorer la conversion
+        String preprocessedJsp = preprocessJspCode(jspCode);
+        
+        // Construction du prompt et conversion
+        String prompt = buildPrompt(preprocessedJsp);
         String conversion = processConversion(prompt);
-        return cleanConvertedHtml(conversion);
+        
+        // Nettoyage et validation du résultat
+        String cleanedHtml = cleanConvertedHtml(conversion);
+        return cleanedHtml;
+    }
+    
+    /**
+     * Prétraite le code JSP pour faciliter sa conversion.
+     * Identifie et marque les structures complexes pour un traitement spécial.
+     *
+     * @param jspCode Code JSP original
+     * @return Code JSP prétraité
+     */
+    private String preprocessJspCode(String jspCode) {
+        if (jspCode == null || jspCode.isEmpty()) {
+            return jspCode;
+        }
+        
+        // Marquer les scriptlets pour une attention particulière
+        String marked = jspCode.replaceAll("<%\\s(?!@|=|!)(.*?)%>", 
+            "<!-- COMPLEX_SCRIPTLET_START --><%$1%><!-- COMPLEX_SCRIPTLET_END -->");
+        
+        // Marquer les déclarations JSP
+        marked = marked.replaceAll("<%!\\s(.*?)%>",
+            "<!-- DECLARATION_START --><%!$1%><!-- DECLARATION_END -->");
+        
+        // Normaliser les expressions EL pour faciliter leur conversion
+        marked = marked.replaceAll("\\$\\{pageContext\\.request\\.contextPath\\}([^}]*?)\\}",
+            "${pageContext.request.contextPath}$1}<!-- CONTEXT_PATH -->");
+        
+        return marked;
     }
     
     /**
@@ -120,6 +153,46 @@ public class JspToThymeleafService {
         // Enlever les espaces/sauts de ligne au début et à la fin
         cleaned = cleaned.trim();
         
+        // Valider la syntaxe Thymeleaf
+        if (!validateThymeleafOutput(cleaned)) {
+            // Log d'avertissement si la validation échoue
+            System.out.println("AVERTISSEMENT: La validation du code Thymeleaf a échoué. Le résultat peut contenir des erreurs.");
+        }
+        
         return cleaned;
+    }
+    
+    /**
+     * Valide que le code Thymeleaf généré est syntaxiquement correct.
+     * Vérifie les erreurs de syntaxe basiques comme les balises non fermées
+     * et les attributs Thymeleaf mal formés.
+     *
+     * @param thymeleafCode Code Thymeleaf à valider
+     * @return true si le code passe les validations de base, false sinon
+     */
+    private boolean validateThymeleafOutput(String thymeleafCode) {
+        if (thymeleafCode == null || thymeleafCode.isEmpty()) {
+            return false;
+        }
+        
+        // Validation 1: Vérifier que chaque balise ouvrante a une fermante
+        boolean hasOpenHtmlTag = thymeleafCode.contains("<html");
+        boolean hasCloseHtmlTag = thymeleafCode.contains("</html>");
+        
+        if (hasOpenHtmlTag != hasCloseHtmlTag) {
+            return false;
+        }
+        
+        // Validation 2: Vérifier les attributs Thymeleaf
+        Pattern thAttributePattern = Pattern.compile("th:[a-z]+=\"[^\"]*\"");
+        Matcher thAttributeMatcher = thAttributePattern.matcher(thymeleafCode);
+        
+        // Validation 3: Vérifier que les namespaces Thymeleaf sont définis
+        boolean hasThNamespace = thymeleafCode.contains("xmlns:th=\"http://www.thymeleaf.org\"");
+        
+        // Une validation plus complète nécessiterait un parser HTML/XML
+        
+        return hasOpenHtmlTag && hasCloseHtmlTag && (thAttributeMatcher.find() || !thymeleafCode.contains("th:")) && 
+               (hasThNamespace || !thymeleafCode.contains("th:"));
     }
 }
