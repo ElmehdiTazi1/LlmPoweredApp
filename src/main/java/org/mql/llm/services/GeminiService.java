@@ -1,38 +1,87 @@
 package org.mql.llm.services;
 
+import org.mql.llm.config.ApiKeyProvider;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
+/**
+ * Service responsable de l'interaction avec l'API Gemini pour la génération de contenu.
+ */
 public class GeminiService {
-    @Value("${gemini.api.key}")
-    private String geminiApiKey;
-
-    @Value("${conversion.model:gemini-1.5-flash}")
-    private String model;
-
-    @Value("${conversion.temperature:0.2}")
-    private double temperature;
-
-    @Value("${conversion.max-tokens:8192}")
-    private int maxTokens;
+    private final ApiKeyProvider apiKeyProvider;
+    private final String model;
+    private final double temperature;
+    private final int maxTokens;
+    
+    /**
+     * Constructeur avec tous les paramètres pour une configuration complète.
+     * 
+     * @param apiKeyProvider Fournisseur de clé API
+     * @param model Le modèle d'IA à utiliser
+     * @param temperature La température pour la génération
+     * @param maxTokens Nombre maximum de tokens pour la sortie
+     */    public GeminiService(ApiKeyProvider apiKeyProvider, String model, double temperature, int maxTokens) {
+        this.apiKeyProvider = apiKeyProvider;
+        this.model = model;
+        this.temperature = temperature;
+        this.maxTokens = maxTokens;
+    }
+    
+    /**
+     * Constructeur avec API key directe et paramètres de configuration.
+     *
+     * @param apiKey Clé API Gemini
+     * @param model Le modèle d'IA à utiliser
+     * @param temperature La température pour la génération
+     * @param maxTokens Nombre maximum de tokens pour la sortie
+     */
+    public GeminiService(String apiKey, String model, double temperature, int maxTokens) {
+        this.apiKeyProvider = new ApiKeyProvider(apiKey);
+        this.model = model;
+        this.temperature = temperature;
+        this.maxTokens = maxTokens;
+    }
+    
+    /**
+     * Constructeur avec API key directe et paramètres par défaut.
+     *
+     * @param apiKey Clé API Gemini
+     */
+    public GeminiService(String apiKey) {
+        this(apiKey, "gemini-1.5-flash", 0.2, 8192);
+    }
+    
+    /**
+     * Constructeur avec ApiKeyProvider et paramètres par défaut pour le modèle.
+     * 
+     * @param apiKeyProvider Fournisseur de clé API
+     */
+    public GeminiService(ApiKeyProvider apiKeyProvider) {
+        this(apiKeyProvider, "gemini-1.5-flash", 0.2, 8192);
+    }
+    
+    /**
+     * Constructeur par défaut avec valeurs par défaut.
+     * Utilise seulement dans un contexte Spring avec @Service.
+     */
+    public GeminiService() {
+        this(new ApiKeyProvider());
+    }
 
     /**
      * Convertit le code JSP en Thymeleaf en utilisant le modèle Gemini.
      * 
      * @param prompt Le prompt complet avec les instructions et le code JSP
      * @return Map contenant le résultat de la conversion ou une erreur
-     */
-    public Map<String, String> processJspConversion(String prompt) {
+     */    public Map<String, String> processJspConversion(String prompt) {
+        String apiKey = apiKeyProvider.getApiKey();
         String apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key="
-                + geminiApiKey;
+                + apiKey;
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();

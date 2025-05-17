@@ -1,6 +1,5 @@
 package org.mql.llm.services;
 
-import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -9,7 +8,6 @@ import java.util.regex.Pattern;
  * Service spécialisé pour la conversion de code JSP vers Thymeleaf
  * utilisant les modèles LLM pour transformer intelligemment le code.
  */
-@Service
 public class JspToThymeleafService {
       private final GeminiService geminiService;
     private final String promptTemplate;
