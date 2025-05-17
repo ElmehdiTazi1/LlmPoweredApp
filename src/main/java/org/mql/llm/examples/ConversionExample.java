@@ -29,6 +29,11 @@ public class ConversionExample {
                                            "</body>\n" +
                                            "</html>";
 
+    /**
+     * Point d'entrée principal pour exécuter les exemples de conversion.
+     * 
+     * @param args Arguments de la ligne de commande (non utilisés)
+     */
     public static void main(String[] args) {
         // Exemple 1: Utilisation avec la clé API par défaut
         usingDefaultApiKey();

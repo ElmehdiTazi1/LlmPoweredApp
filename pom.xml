@@ -1,21 +1,16 @@
-<?xm	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.mql.llm</groupId>
-	<artifactId>jsp2thymeleaf-converter</artifactId>
-	<version>1.0.0</version>
-	<packaging>jar</packaging>
-	<name>JSP to Thymeleaf Converter</name>
-	<description>A library for converting JSP code to Thymeleaf using AI models</description>on="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.mql.llm</groupId>
-	<artifactId>jsp2thymeleaf-converter</artifactId>
-	<version>1.0.0</version>
-	<packaging>jar</packaging>
-	<name>JSP to Thymeleaf Converter</name>
-	<description>A library for converting JSP code to Thymeleaf using AI models</description>
-	<properties>
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.mql.llm</groupId>
+    <artifactId>jsp2thymeleaf-converter</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>JSP to Thymeleaf Converter</name>
+    <description>A library for converting JSP code to Thymeleaf using AI models</description>
+    
+    <properties>
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -29,7 +24,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-core</artifactId>
             <version>${spring.version}</version>
-            <scope>provided</scope>
         </dependency>
         
         <!-- Spring Web -->
@@ -37,7 +31,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
             <version>${spring.version}</version>
-            <scope>provided</scope>
         </dependency>
         
         <!-- Spring Context -->
@@ -45,7 +38,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
             <version>${spring.version}</version>
-            <scope>provided</scope>
         </dependency>
         
         <!-- Jackson JSON - for REST API -->
